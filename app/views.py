@@ -6,17 +6,69 @@ This file creates your application.
 """
 
 from app import app
+from . import db
 from flask import render_template, request, jsonify, send_file
+from flask_wtf.csrf import generate_csrf
 import os
+from app.models import MovieProfile
+from app.forms import MovieForm
+from werkzeug.utils import secure_filename, send_from_directory
 
 
 ###
 # Routing for your application.
 ###
+@app.route('/api/v1/movies', methods=['POST'])
+def movies():
+    form = MovieForm()
+   
+    
+    if request.method == "POST" and form.validate():
+        title = request.form['title']
+        description = request.form['description']
+        poster = request.files['poster']
+        
+        filename = secure_filename(poster.filename)
+        
+        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        
+        
+        movie = MovieProfile(title=form.title.data,
+                      poster=form.poster.data.filename,
+                      description=form.description.data)
+        
+        db.session.add(movie)
+        db.session.commit()
+        
+          
+        return jsonify({
+            'message': 'Movie successfully added.',
+            'title': movie.title,
+            'poster': movie.poster,
+            'description': movie.description,
+        }), 201
+        
+@app.route('/api/v1/csrf-token', methods=['GET'])
+def get_csrf():
+    return jsonify({'csrf_token': generate_csrf()})       
 
 @app.route('/')
 def index():
     return jsonify(message="This is the beginning of our API")
+
+@app.route('/upload/<filename>')
+def get_uploaded_images(filename):
+    rootdir = os.getcwd()
+    return send_from_directory(os.path.join(rootdir,app.config['UPLOAD_FOLDER']), filename)
+
+def get_images():
+    rootdir = os.getcwd()
+    #print (rootdir)
+    filelist = []
+    for subdir, dirs, files in os.walk(rootdir + '/uploads'):
+        for file in files:
+            filelist.append(file)
+        return filelist
 
 
 ###
@@ -55,6 +107,8 @@ def add_header(response):
     response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
     response.headers['Cache-Control'] = 'public, max-age=0'
     return response
+
+
 
 
 @app.errorhandler(404)
