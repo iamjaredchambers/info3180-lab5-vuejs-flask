@@ -13,6 +13,7 @@ import os
 from app.models import MovieProfile
 from app.forms import MovieForm
 from werkzeug.utils import secure_filename, send_from_directory
+from datetime import datetime
 
 
 ###
@@ -23,7 +24,7 @@ def movies():
     form = MovieForm()
    
     
-    if request.method == "POST" and form.validate():
+    if request.method == "POST" and form.valiate_on_submit():
         title = request.form['title']
         description = request.form['description']
         poster = request.files['poster']
@@ -33,7 +34,7 @@ def movies():
         poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
         
         
-        movie = MovieProfile(title=form.title.data,
+        movie = MovieProfile(title,description, filename, created_at=datetime.datetime.now(),
                       poster=form.poster.data.filename,
                       description=form.description.data)
         
