@@ -7,48 +7,70 @@ This file creates your application.
 
 from app import app
 from . import db
-from flask import render_template, request, jsonify, send_file
+from flask import render_template, request, jsonify, send_file, url_for, session, abort, send_from_directory
 from flask_wtf.csrf import generate_csrf
 import os
 from app.models import MovieProfile
 from app.forms import MovieForm
-from werkzeug.utils import secure_filename, send_from_directory
-from datetime import datetime
+from werkzeug.utils import secure_filename
+import datetime
 
 
 ###
 # Routing for your application.
 ###
-@app.route('/api/v1/movies', methods=['POST'])
+@app.route('/api/v1/movies', methods=['POST', 'GET'])
 def movies():
+    
     form = MovieForm()
    
     
-    if request.method == "POST" and form.valiate_on_submit():
-        title = request.form['title']
-        description = request.form['description']
-        poster = request.files['poster']
+    if request.method == 'POST': 
+        if form.validate_on_submit():
+            title = form.title.data
+            description = form.description.data
+            poster = form.poster.data
+            
+            filename = secure_filename(poster.filename)
+            
+            poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            
+            movie = MovieProfile(title, description, filename, created_at = datetime.datetime.now())
+            
+            db.session.add(movie)
+            db.session.commit()
+            
+            
+            message = {
+                'message': 'Movie successfully added.',
+                'title': title,
+                'poster': filename,
+                'description': description
+            }
+            
+            
+            
+            return jsonify(message=message)
+        return jsonify(errors=form_errors(form))
         
-        filename = secure_filename(poster.filename)
         
-        poster.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+    if request.method == 'GET': 
+        movies = db.session.execute(db.select(MovieProfile)).scalars()
+        print("This are the movies", movies)
+        movie_list = []
+        for movie in movies:
+            movie_list.append({
+                "id": movie.id,
+                "title": movie.title,
+                "description": movie.description,
+                "poster": url_for('get_uploaded_images', filename=movie.poster)
+                
+            })
         
-        
-        movie = MovieProfile(title,description, filename, created_at=datetime.datetime.now(),
-                      poster=form.poster.data.filename,
-                      description=form.description.data)
-        
-        db.session.add(movie)
-        db.session.commit()
-        
-          
-        return jsonify({
-            'message': 'Movie successfully added.',
-            'title': movie.title,
-            'poster': movie.poster,
-            'description': movie.description,
-        }), 201
-        
+        print(movie_list)
+        return jsonify(movies=movie_list)
+             
 @app.route('/api/v1/csrf-token', methods=['GET'])
 def get_csrf():
     return jsonify({'csrf_token': generate_csrf()})       
@@ -57,7 +79,7 @@ def get_csrf():
 def index():
     return jsonify(message="This is the beginning of our API")
 
-@app.route('/upload/<filename>')
+@app.route("/api/v1/posters/<filename>")
 def get_uploaded_images(filename):
     rootdir = os.getcwd()
     return send_from_directory(os.path.join(rootdir,app.config['UPLOAD_FOLDER']), filename)

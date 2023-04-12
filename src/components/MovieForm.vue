@@ -1,17 +1,19 @@
 <template>
-     <form id="movieForm" @submit.prevent="saveMovie"></form>
+     <form id="movieForm" @submit.prevent="saveMovie">
         <div class="mb-3">
         <label for="title" class="form-label" id = "form-label">Movie Title</label>
         <input type="text" name="title" class="formcontrol"/>
-        <label for="title" class="form-label"> Description</label>
-        <input type="text" name="Description" class="formcontrol"/>
-        <label for="exampleFormControlFile1"> Poster Input</label>
-        <input type="file" class="form-control-file" id="exampleFormControlFile1">
+        <label for="description" class="form-label"> Description</label>
+        <input type="text" name="description" class="formcontrol"/>
+        <label for="poster" class="form-label">Poster</label>
+        <input type ="file" class="formcontrol" name = "poster" />
         <button type="submit">Upload</button>
+      
         
         <!-- Holy Spirit come into this code, I dont wanna fail at life ooooo. It will not be displayed on the webpage. -->
 
 </div>
+</form>
 </template>
 
 <script setup>
@@ -46,12 +48,15 @@ onMounted(() => {
             })
             .then(function(data) 
             {
-                console.log(data.message);
+                console.log(data);
+                
                 // display success message or redirect to another page
              })
             .catch(function(error) 
             {
                 console.log(error);
+                console.log("Houston we have a problem")
+
     // display error message to user
             });
         }
